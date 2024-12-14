@@ -1,5 +1,14 @@
-# GWAS-R
-A genome-wide association study using R
+# GWAS Analysis Pipeline in R
+This repository contains an R pipeline for conducting Genome-Wide Association Studies (GWAS) using phenotype and genotype data.
+
+## Features
+- Outlier detection and data cleaning
+- Genotype encoding
+- Statistical regression for GWAS
+- Visualization (Manhattan and Q-Q plots)
+- Identification of significant SNPs
+
+
 
 Genome-Wide Association Studies (GWAS)
 The collaborator is interested in mapping genetic loci that can affect human Body Mass Index
