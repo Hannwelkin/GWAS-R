@@ -17,6 +17,11 @@ clean_data <- function(phen, gen) {
   boxplot.phen <- boxplot(phen$phenos, main = "Boxplot of Phenotype")
   outliers <- boxplot.phen$out
   
+  # checking number of rows first
+  if (!all(rownames(phen) == rownames(gen))) {
+    stop("Phenotype - genotype data are not aligned.")
+  }
+  
   # Remove outliers from phenotype and genotype data
   phen <- phen[-which(phen$phenos %in% outliers), ]
   gen <- gen[-which(phen$phenos %in% outliers), ]
@@ -44,15 +49,13 @@ visualize_data <- function(phen) {
 }
 
 # Function to process genotypic data
-process_genotypes <- function(gen) {
-  # Merge genotype columns for easier analysis
-  gen$gen1 <- paste(gen$geno1_1, gen$geno1_2)
-  
-  # Remove bad entries (if required)
-  gen <- gen[-c(1167:1168, 1819:1820, 3539:3540, 5099:5100)]
-  
+# Remove bad entries (if required)
+process_genotypes <- function(gen, bad_rows = NULL, missing_value = 9) {
+  if (!is.null(bad_rows)) gen <- gen[-bad_rows, ]
+  gen[gen == missing_value] <- NA
   return(gen)
 }
+
 
 # Function to prepare the genotype-phenotype matrix
 prepare_gwas_data <- function(gen, phen) {
@@ -62,23 +65,9 @@ prepare_gwas_data <- function(gen, phen) {
   Xd <- data.frame(NA_col = rep(NA, nrow(gen)))
   
   # Encoding genotypes
-  for (i in 1:ncol(gen)) {
-    for (j in 1:nrow(gen)) {
-      if (gen[j, i*2-1] == "A1" && gen[j, i*2] == "A1") {
-        Xa[j, i] <- -1
-        Xd[j, i] <- -1
-      } else if (gen[j, i*2-1] == "A1" && gen[j, i*2] == "A2") {
-        Xa[j, i] <- 0
-        Xd[j, i] <- 1
-      } else {
-        Xa[j, i] <- 1
-        Xd[j, i] <- 0
-      }
-    }
-  }
-  
-  return(list(Xa = Xa, Xd = Xd, phen = phen.numeric))
-}
+  Xa <- ifelse(gen[, seq(1, ncol(gen), 2)] == "A1" & gen[, seq(2, ncol(gen), 2)] == "A1", -1, 
+               ifelse(gen[, seq(1, ncol(gen), 2)] == "A1" & gen[, seq(2, ncol(gen), 2)] == "A2", 0, 1))
+  Xd <- ifelse(gen[, seq(1, ncol(gen), 2)] == "A1" & gen[, seq(2, ncol(gen), 2)] == "A2", 1, 0)
 
 # Function for GWAS regression and beta calculations
 perform_gwas <- function(Xa, Xd, phen) {
@@ -117,9 +106,8 @@ calculate_statistics <- function(phen, beta.list, xmatrix) {
 # Function to visualize GWAS results (Manhattan plot and Q-Q plot)
 visualize_gwas_results <- function(Pvalue) {
   # Manhattan plot
-  Pvalue.df <- data.frame(Pvalue = Pvalue, chr = rep(8, length(Pvalue)), Snp = 1:length(Pvalue), Bp = 1:length(Pvalue))
+  Pvalue.df <- data.frame(Pvalue = Pvalue, chr = gen$chr, Snp = gen$snp, Bp = gen$bp)
   manhattan(Pvalue.df, p = "Pvalue", chr = "chr", bp = "Bp", snp = "Snp", main = "GWAS Manhattan Plot")
-  
   # Q-Q plot
   qq(Pvalue, main = "Q-Q plot of P-values")
 }
